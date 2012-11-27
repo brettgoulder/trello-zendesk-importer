@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+
+require 'zendesk_api'
+
+$stdout.sync = true
+
+client = ZendeskAPI::Client.new do |config|
+  config.url = ENV['ZENDESK_URL']
+  config.username = ENV['ZENDESK_USERNAME']
+  config.token = ENV['ZENDESK_TOKEN']
+
+  config.retry = true
+end
+
+puts "tickets: #{client.tickets.find(:group => "routing")}"
