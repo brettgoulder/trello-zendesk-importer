@@ -4,6 +4,7 @@
 
 ```bash
 $ heroku create
+$ git push heroku master
 ```
 
 ### Setup Trello config vars
@@ -44,6 +45,25 @@ $ heroku config:add TRELLO_LABEL=blue
 ```bash
 $ heroku config:add ZENDESK_URL=https://mycompany.zendesk.com
 $ heroku config:add ZENDESK_USERNAME=your@email.addr
+```
+In Zendesk, Settings -> Channels -> API -> Token Access
+
+```bash
 $ heroku config:add ZENDESK_TOKEN=...
+```
+
+Integer id of Zendesk view
+
+```bash
 $ heroku config:add ZENDESK_VIEW=...
+```
+
+### Setup the scheduler addon
+
+https://devcenter.heroku.com/articles/scheduler
+
+use the following command:
+
+```
+bundle exec bin/import-tickets
 ```
