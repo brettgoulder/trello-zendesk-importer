@@ -16,7 +16,11 @@ $ heroku config:add TRELLO_API_KEY=...
 $ heroku config:add TRELLO_OAUTH_SECRET=...
 ```
 
-Get your user access token by substituting your api key into the following url: https://trello.com/1/authorize?key=yourapplicationapikey&name=Zendesk+Importer&expiration=never&response_type=token&scope=read,write
+Get your user access token by substituting your api key into the following url
+
+```
+https://trello.com/1/authorize?key=YOUR_API_KEY_GOES_HERE&name=Zendesk+Importer&expiration=never&response_type=token&scope=read,write
+```
 
 ```bash
 $ heroku config:add TRELLO_ACCESS_TOKEN_KEY=...
