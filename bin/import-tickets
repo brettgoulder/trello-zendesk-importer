@@ -1,15 +1,58 @@
 #!/usr/bin/env ruby
 
-require 'zendesk_api'
+require 'trello'
+require 'excon'
+require 'base64'
+require 'json'
 
 $stdout.sync = true
 
-client = ZendeskAPI::Client.new do |config|
-  config.url = ENV['ZENDESK_URL']
-  config.username = ENV['ZENDESK_USERNAME']
-  config.token = ENV['ZENDESK_TOKEN']
+include Trello
+include Trello::Authorization
 
-  config.retry = true
+ZENDESK_URL = ENV['ZENDESK_URL']
+ZENDESK_USERNAME = ENV['ZENDESK_USERNAME']
+ZENDESK_TOKEN = ENV['ZENDESK_TOKEN']
+ZENDESK_VIEW = ENV['ZENDESK_VIEW']
+
+TRELLO_API_KEY = ENV['TRELLO_API_KEY']
+TRELLO_OAUTH_SECRET = ENV['TRELLO_OAUTH_SECRET']
+TRELLO_ACCESS_TOKEN_KEY = ENV['TRELLO_ACCESS_TOKEN_KEY']
+TRELLO_BOARD_ID = ENV['TRELLO_BOARD_ID']
+TRELLO_LIST = ENV['TRELLO_LIST']
+TRELLO_LABEL = ENV['TRELLO_LABEL']
+
+Trello::Authorization.const_set :AuthPolicy, OAuthPolicy
+OAuthPolicy.consumer_credential = OAuthCredential.new TRELLO_API_KEY, TRELLO_OAUTH_SECRET
+OAuthPolicy.token = OAuthCredential.new TRELLO_ACCESS_TOKEN_KEY, nil
+
+def ticket_exists(ticket, cards)
+  not cards.select do |card|
+    #puts "compare #{card["name"]} == Ticket ##{ticket["id"]}"
+    card["name"] == "Ticket ##{ticket["id"]}"
+  end.empty?
 end
 
-puts "tickets: #{client.tickets.find(:group => "routing")}"
+def create_ticket(ticket, list)
+  puts "create ticket: #{ticket["id"]}"
+  card = JSON.parse Client.post("/cards", {:idList => list, :name => "Ticket ##{ticket["id"]}", :desc => "#{ZENDESK_URL}/tickets/#{ticket["id"]}"})
+  Client.post("/cards/#{card["id"]}/actions/comments", {:text => ticket["description"]})
+  Client.post("/cards/#{card["id"]}/labels", {:value => TRELLO_LABEL}) if TRELLO_LABEL
+end
+
+cards = JSON.parse Client.get("/boards/#{TRELLO_BOARD_ID}/cards", {:lists => "open", :fields => ["name"]})
+
+lists = JSON.parse Client.get("/boards/#{TRELLO_BOARD_ID}/lists", {:fields => ["name"]})
+list = lists.select {|l| l["name"] == TRELLO_LIST }.first["id"] rescue nil
+
+enc = Base64.encode64("#{ZENDESK_USERNAME}/token:#{ZENDESK_TOKEN}").gsub("\n","")
+auth = "Basic #{enc}"
+url = "#{ZENDESK_URL}/api/v2/views/#{ZENDESK_VIEW}/execute.json"
+headers = {'Authorization' => auth, 'Accept' => "application/json"}
+resp = JSON.parse Excon.get(url, :headers => headers).body
+resp["rows"].each do |row|
+  ticket = row["ticket"]
+  unless ticket_exists(ticket, cards)
+    create_ticket(ticket, list)
+  end
+end
